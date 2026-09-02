@@ -1,0 +1,125 @@
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define HASH_SIZE 2003
+
+typedef struct HashNode {
+    char* word;
+    int count;
+    struct HashNode* next;
+} HashNode;
+
+unsigned int getHash(const char* str, int len) {
+    unsigned int hash = 5381;
+    for (int i = 0; i < len; i++) {
+        hash = ((hash << 5) + hash) + str[i];
+    }
+    return hash % HASH_SIZE;
+}
+
+void insertWord(HashNode** table, const char* word, int len) {
+    unsigned int index = getHash(word, len);
+    HashNode* curr = table[index];
+    while (curr != NULL) {
+        if (strncmp(curr->word, word, len) == 0 && curr->word[len] == '\0') {
+            curr->count++;
+            return;
+        }
+        curr = curr->next;
+    }
+    HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
+    newNode->word = (char*)malloc((len + 1) * sizeof(char));
+    strncpy(newNode->word, word, len);
+    newNode->word[len] = '\0';
+    newNode->count = 1;
+    newNode->next = table[index];
+    table[index] = newNode;
+}
+
+int getWordCount(HashNode** table, const char* word, int len) {
+    unsigned int index = getHash(word, len);
+    HashNode* curr = table[index];
+    while (curr != NULL) {
+        if (strncmp(curr->word, word, len) == 0 && curr->word[len] == '\0') {
+            return curr->count;
+        }
+        curr = curr->next;
+    }
+    return 0;
+}
+
+void freeTable(HashNode** table) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        HashNode* curr = table[i];
+        while (curr != NULL) {
+            HashNode* temp = curr;
+            curr = curr->next;
+            free(temp->word);
+            free(temp);
+        }
+        table[i] = NULL;
+    }
+}
+
+int* findSubstring(char* s, char** words, int wordsSize, int* returnSize) {
+    *returnSize = 0;
+    if (s == NULL || wordsSize == 0 || words == NULL) return NULL;
+
+    int sLen = strlen(s);
+    int wordLen = strlen(words[0]);
+    int totalWordsLen = wordsSize * wordLen;
+
+    if (sLen < totalWordsLen) return NULL;
+
+    int* result = (int*)malloc(sLen * sizeof(int));
+    HashNode* wordCountTable[HASH_SIZE] = {NULL};
+
+    for (int i = 0; i < wordsSize; i++) {
+        insertWord(wordCountTable, words[i], wordLen);
+    }
+
+    HashNode* windowTable[HASH_SIZE] = {NULL};
+
+    for (int i = 0; i < wordLen; i++) {
+        int left = i;
+        int count = 0;
+        
+        for (int j = i; j <= sLen - wordLen; j += wordLen) {
+            char* wordPtr = s + j;
+            int expectedCount = getWordCount(wordCountTable, wordPtr, wordLen);
+
+            if (expectedCount > 0) {
+                insertWord(windowTable, wordPtr, wordLen);
+                count++;
+
+                while (getWordCount(windowTable, wordPtr, wordLen) > expectedCount) {
+                    char* leftWordPtr = s + left;
+                    unsigned int leftIdx = getHash(leftWordPtr, wordLen);
+                    HashNode* curr = windowTable[leftIdx];
+                    while (curr != NULL) {
+                        if (strncmp(curr->word, leftWordPtr, wordLen) == 0 && curr->word[wordLen] == '\0') {
+                            curr->count--;
+                            break;
+                        }
+                        curr = curr->next;
+                    }
+                    count--;
+                    left += wordLen;
+                }
+
+                if (count == wordsSize) {
+                    result[(*returnSize)++] = left;
+                }
+            } else {
+                freeTable(windowTable);
+                count = 0;
+                left = j + wordLen;
+            }
+        }
+        freeTable(windowTable);
+    }
+
+    freeTable(wordCountTable);
+    return result;
+}
