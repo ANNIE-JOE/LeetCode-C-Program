@@ -6,7 +6,7 @@ int divide(int dividend, int divisor) {
         return INT_MAX;
     }
 
-    int sign = ((dividend > 0) ^ (divisor > 0)) ? -1 : 1;
+    int is_negative = ((dividend > 0) ^ (divisor > 0));
 
     long long abs_dividend = labs(dividend);
     long long abs_divisor = labs(divisor);
@@ -25,5 +25,9 @@ int divide(int dividend, int divisor) {
         quotient += multiple;
     }
 
-    return sign * quotient;
+    if (is_negative) {
+        quotient = -quotient;
+    }
+
+    return quotient;
 }
