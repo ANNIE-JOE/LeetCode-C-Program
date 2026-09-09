@@ -1,0 +1,28 @@
+struct TreeNode* buildTreeHelper(int* inorder, int inStart, int inEnd, int* postorder, int* postIdx) {
+    if (inStart > inEnd) {
+        return NULL;
+    }
+
+    int rootVal = postorder[*postIdx];
+    (*postIdx)--;
+
+    struct TreeNode* root = (struct TreeNode*)malloc(sizeof(struct TreeNode));
+    root->val = rootVal;
+    root->left = NULL;
+    root->right = NULL;
+
+    int rootInIdx = inStart;
+    while (rootInIdx <= inEnd && inorder[rootInIdx] != rootVal) {
+        rootInIdx++;
+    }
+
+    root->right = buildTreeHelper(inorder, rootInIdx + 1, inEnd, postorder, postIdx);
+    root->left = buildTreeHelper(inorder, inStart, rootInIdx - 1, postorder, postIdx);
+
+    return root;
+}
+
+struct TreeNode* buildTree(int* inorder, int inorderSize, int* postorder, int postorderSize) {
+    int postIdx = postorderSize - 1;
+    return buildTreeHelper(inorder, 0, inorderSize - 1, postorder, &postIdx);
+}
