@@ -1,0 +1,71 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+
+char* minWindow(char* s, char* t) {
+    int lenS = strlen(s);
+    int lenT = strlen(t);
+    
+    if (lenS == 0 || lenT == 0 || lenS < lenT) {
+        return "";
+    }
+    
+    int tFreq[128] = {0};
+    int sFreq[128] = {0};
+    
+    for (int i = 0; i < lenT; i++) {
+        tFreq[(unsigned char)t[i]]++;
+    }
+    
+    int required = 0;
+    for (int i = 0; i < 128; i++) {
+        if (tFreq[i] > 0) {
+            required++;
+        }
+    }
+    
+    int formed = 0;
+    int left = 0;
+    int right = 0;
+    
+    int minLen = INT_MAX;
+    int minLeft = 0;
+    
+    while (right < lenS) {
+        char c = s[right];
+        sFreq[(unsigned char)c]++;
+        
+        if (tFreq[(unsigned char)c] > 0 && sFreq[(unsigned char)c] == tFreq[(unsigned char)c]) {
+            formed++;
+        }
+        
+        while (left <= right && formed == required) {
+            c = s[left];
+            
+            if (right - left + 1 < minLen) {
+                minLen = right - left + 1;
+                minLeft = left;
+            }
+            
+            sFreq[(unsigned char)c]--;
+            if (tFreq[(unsigned char)c] > 0 && sFreq[(unsigned char)c] < tFreq[(unsigned char)c]) {
+                formed--;
+            }
+            
+            left++;
+        }
+        
+        right++;
+    }
+    
+    if (minLen == INT_MAX) {
+        return "";
+    }
+    
+    char* result = (char*)malloc((minLen + 1) * sizeof(char));
+    strncpy(result, s + minLeft, minLen);
+    result[minLen] = '\0';
+    
+    return result;
+}
