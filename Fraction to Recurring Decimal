@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define HASH_SIZE 10007
+
+typedef struct HashNode {
+    long long remainder;
+    int index;
+    struct HashNode* next;
+} HashNode;
+
+int getHashIndex(long long rem) {
+    return (int)(rem % HASH_SIZE);
+}
+
+void insertHash(HashNode** table, long long rem, int index) {
+    int h = getHashIndex(rem);
+    HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
+    newNode->remainder = rem;
+    newNode->index = index;
+    newNode->next = table[h];
+    table[h] = newNode;
+}
+
+int searchHash(HashNode** table, long long rem) {
+    int h = getHashIndex(rem);
+    HashNode* curr = table[h];
+    while (curr != NULL) {
+        if (curr->remainder == rem) {
+            return curr->index;
+        }
+        curr = curr->next;
+    }
+    return -1;
+}
+
+void freeHash(HashNode** table) {
+    for (int i = 0; i < HASH_SIZE; i++) {
+        HashNode* curr = table[i];
+        while (curr != NULL) {
+            HashNode* temp = curr;
+            curr = curr->next;
+            free(temp);
+        }
+    }
+}
+
+char* fractionToDecimal(int numerator, int denominator) {
+    if (numerator == 0) {
+        char* res = (char*)malloc(2 * sizeof(char));
+        strcpy(res, "0");
+        return res;
+    }
+
+    char* res = (char*)malloc(10005 * sizeof(char));
+    int pos = 0;
+
+    if ((numerator < 0) ^ (denominator < 0)) {
+        res[pos++] = '-';
+    }
+
+    long long num = labs((long long)numerator);
+    long long den = labs((long long)denominator);
+
+    long long initial_quotient = num / den;
+    pos += sprintf(res + pos, "%lld", initial_quotient);
+
+    long long rem = num % den;
+    if (rem == 0) {
+        res[pos] = '\0';
+        return res;
+    }
+
+    res[pos++] = '.';
+
+    HashNode* table[HASH_SIZE] = {NULL};
+    int fractional_start = pos;
+
+    while (rem != 0) {
+        int existing_index = searchHash(table, rem);
+        if (existing_index != -1) {
+            memmove(res + existing_index + 1, res + existing_index, pos - existing_index);
+            res[existing_index] = '(';
+            pos++;
+            res[pos++] = ')';
+            break;
+        }
+
+        insertHash(table, rem, pos);
+
+        rem *= 10;
+        res[pos++] = (rem / den) + '0';
+        rem %= den;
+    }
+
+    res[pos] = '\0';
+    freeHash(table);
+    return res;
+}
