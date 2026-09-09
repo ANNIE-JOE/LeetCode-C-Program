@@ -1,0 +1,71 @@
+#include <stdbool.h>
+#include <stdlib.h>
+
+#define HASH_SIZE 200003
+
+typedef struct HashNode {
+    int key;
+    int index;
+    struct HashNode* next;
+} HashNode;
+
+typedef struct {
+    HashNode* buckets[HASH_SIZE];
+} HashTable;
+
+unsigned int hash(int key) {
+    long long k = key;
+    if (k < 0) {
+        k = -k;
+    }
+    return k % HASH_SIZE;
+}
+
+bool containsNearbyDuplicate(int* nums, int numsSize, int k) {
+    HashTable* table = (HashTable*)calloc(1, sizeof(HashTable));
+    
+    for (int i = 0; i < numsSize; i++) {
+        unsigned int idx = hash(nums[i]);
+        HashNode* curr = table->buckets[idx];
+        
+        while (curr != NULL) {
+            if (curr->key == nums[i]) {
+                if (i - curr->index <= k) {
+                    for (int j = 0; j < HASH_SIZE; j++) {
+                        HashNode* node = table->buckets[j];
+                        while (node != NULL) {
+                            HashNode* temp = node;
+                            node = node->next;
+                            free(temp);
+                        }
+                    }
+                    free(table);
+                    return true;
+                }
+                curr->index = i;
+                break;
+            }
+            curr = curr->next;
+        }
+        
+        if (curr == NULL) {
+            HashNode* newNode = (HashNode*)malloc(sizeof(HashNode));
+            newNode->key = nums[i];
+            newNode->index = i;
+            newNode->next = table->buckets[idx];
+            table->buckets[idx] = newNode;
+        }
+    }
+    
+    for (int i = 0; i < HASH_SIZE; i++) {
+        HashNode* curr = table->buckets[i];
+        while (curr != NULL) {
+            HashNode* temp = curr;
+            curr = curr->next;
+            free(temp);
+        }
+    }
+    free(table);
+    
+    return false;
+}
