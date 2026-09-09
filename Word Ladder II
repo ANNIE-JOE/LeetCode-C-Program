@@ -1,0 +1,157 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+typedef struct Node {
+    int val;
+    struct Node* next;
+} Node;
+
+void addEdge(Node** adj, int u, int v) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    newNode->val = v;
+    newNode->next = adj[u];
+    adj[u] = newNode;
+}
+
+void getPaths(int curr, Node** parent, char** wordList, char** currentPath, int pathLen, char**** result, int* returnSize, int** returnColumnSizes, int* capacity) {
+    currentPath[pathLen++] = wordList[curr];
+    
+    if (parent[curr] == NULL) {
+        if (*returnSize >= *capacity) {
+            *capacity = (*capacity == 0) ? 64 : (*capacity * 2);
+            *result = (char***)realloc(*result, (*capacity) * sizeof(char**));
+            *returnColumnSizes = (int*)realloc(*returnColumnSizes, (*capacity) * sizeof(int));
+        }
+        
+        char** pathCopy = (char**)malloc(pathLen * sizeof(char*));
+        for (int i = 0; i < pathLen; i++) {
+            pathCopy[i] = currentPath[pathLen - 1 - i];
+        }
+        (*result)[*returnSize] = pathCopy;
+        (*returnColumnSizes)[*returnSize] = pathLen;
+        (*returnSize)++;
+        return;
+    }
+    
+    Node* head = parent[curr];
+    while (head != NULL) {
+        getPaths(head->val, parent, wordList, currentPath, pathLen, result, returnSize, returnColumnSizes, capacity);
+        head = head->next;
+    }
+}
+
+char*** findLadders(char* beginWord, char* endWord, char** wordList, int wordListSize, int* returnSize, int** returnColumnSizes) {
+    *returnSize = 0;
+    *returnColumnSizes = NULL;
+    
+    int endIdx = -1;
+    for (int i = 0; i < wordListSize; i++) {
+        if (strcmp(wordList[i], endWord) == 0) {
+            endIdx = i;
+            break;
+        }
+    }
+    
+    if (endIdx == -1) return NULL;
+    
+    int totalWords = wordListSize + 1;
+    char** allWords = (char**)malloc(totalWords * sizeof(char*));
+    allWords[0] = beginWord;
+    for (int i = 0; i < wordListSize; i++) {
+        allWords[i + 1] = wordList[i];
+    }
+    
+    int startNode = 0;
+    int endNode = endIdx + 1;
+    int wordLen = strlen(beginWord);
+    
+    int* dist = (int*)malloc(totalWords * sizeof(int));
+    for (int i = 0; i < totalWords; i++) dist[i] = 1e9;
+    
+    Node** parent = (Node**)calloc(totalWords, sizeof(Node*));
+    
+    int* queue = (int*)malloc(totalWords * sizeof(int));
+    int head = 0, tail = 0;
+    
+    queue[tail++] = startNode;
+    dist[startNode] = 0;
+    
+    bool found = false;
+    
+    // To handle upper bound layer allocations safely
+    int maxLayerNodes = totalWords * totalWords;
+    int* currentLayerNodes = (int*)malloc(maxLayerNodes * sizeof(int));
+    int* currentLayerDists = (int*)malloc(maxLayerNodes * sizeof(int));
+    
+    while (head < tail) {
+        int layerSize = tail - head;
+        if (found) break;
+        
+        int layerCount = 0;
+        
+        for (int i = 0; i < layerSize; i++) {
+            int u = queue[head++];
+            if (u == endNode) {
+                found = true;
+                break;
+            }
+            
+            for (int v = 0; v < totalWords; v++) {
+                int diff = 0;
+                for (int k = 0; k < wordLen; k++) {
+                    if (allWords[u][k] != allWords[v][k]) {
+                        diff++;
+                        if (diff > 1) break;
+                    }
+                }
+                
+                if (diff == 1) {
+                    if (dist[u] + 1 <= dist[v]) {
+                        currentLayerNodes[layerCount] = v;
+                        currentLayerDists[layerCount] = dist[u] + 1;
+                        layerCount++;
+                        addEdge(parent, v, u);
+                    }
+                }
+            }
+        }
+        
+        for (int i = 0; i < layerCount; i++) {
+            int v = currentLayerNodes[i];
+            int d = currentLayerDists[i];
+            if (d < dist[v]) {
+                dist[v] = d;
+                queue[tail++] = v;
+            }
+        }
+    }
+    
+    free(currentLayerNodes);
+    free(currentLayerDists);
+    free(queue);
+    
+    char*** result = NULL;
+    if (dist[endNode] != 1e9) {
+        int capacity = 0;
+        char** currentPath = (char**)malloc(totalWords * sizeof(char*));
+        getPaths(endNode, parent, allWords, currentPath, 0, &result, returnSize, returnColumnSizes, &capacity);
+        free(currentPath);
+    }
+    
+    for (int i = 0; i < totalWords; i++) {
+        Node* curr = parent[i];
+        while (curr != NULL) {
+            Node* temp = curr;
+            curr = curr->next;
+            free(temp);
+        }
+    }
+    
+    free(parent);
+    free(dist);
+    free(allWords);
+    
+    return result;
+}
