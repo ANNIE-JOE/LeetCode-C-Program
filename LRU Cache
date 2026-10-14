@@ -1,0 +1,97 @@
+#include <stdlib.h>
+#include <string.h>
+typedef struct Node {
+    int key;
+    int value;
+    struct Node* prev;
+    struct Node* next;
+} Node;
+typedef struct {
+    int capacity;
+    int size;
+    Node* head;
+    Node* tail;
+    Node** hashMap;
+} LRUCache;
+Node* createNode(int key, int value) {
+    Node* node = (Node*)malloc(sizeof(Node));
+    node->key = key;
+    node->value = value;
+    node->prev = NULL;
+    node->next = NULL;
+    return node;
+}
+void addNode(LRUCache* obj, Node* node) {
+    node->next = obj->head->next;
+    node->prev = obj->head;
+    obj->head->next->prev = node;
+    obj->head->next = node;
+}
+void removeNode(Node* node) {
+    Node* prevNode = node->prev;
+    Node* nextNode = node->next;
+    prevNode->next = nextNode;
+    nextNode->prev = prevNode;
+}
+void moveToHead(LRUCache* obj, Node* node) {
+    removeNode(node);
+    addNode(obj, node);
+}
+Node* popTail(LRUCache* obj) {
+    Node* res = obj->tail->prev;
+    removeNode(res);
+    return res;
+}
+LRUCache* lRUCacheCreate(int capacity) {
+    LRUCache* obj = (LRUCache*)malloc(sizeof(LRUCache));
+    obj->capacity = capacity;
+    obj->size = 0;
+    obj->hashMap = (Node**)calloc(10001, sizeof(Node*));
+    obj->head = createNode(-1, -1);
+    obj->tail = createNode(-1, -1);
+    obj->head->next = obj->tail;
+    obj->tail->prev = obj->head;
+    
+    return obj;
+}
+int lRUCacheGet(LRUCache* obj, int key) {
+    if (key < 0 || key > 10000) return -1;
+    
+    Node* node = obj->hashMap[key];
+    if (node == NULL) {
+        return -1;
+    }
+    moveToHead(obj, node);
+    return node->value;
+}
+void lRUCachePut(LRUCache* obj, int key, int value) {
+    if (key < 0 || key > 10000) return;
+    
+    Node* node = obj->hashMap[key];
+    
+    if (node != NULL) {
+        node->value = value;
+        moveToHead(obj, node);
+    } else {
+        Node* newNode = createNode(key, value);
+        obj->hashMap[key] = newNode;
+        addNode(obj, newNode);
+        obj->size++;
+        if (obj->size > obj->capacity) {
+            Node* tail = popTail(obj);
+            obj->hashMap[tail->key] = NULL;
+            free(tail);
+            obj->size--;
+        }
+    }
+}
+void lRUCacheFree(LRUCache* obj) {
+    Node* curr = obj->head;
+    while (curr != NULL) {
+        Node* next = curr->next;
+        free(curr);
+        curr = next;
+    }
+    free(obj->hashMap);
+    free(obj);
+}
