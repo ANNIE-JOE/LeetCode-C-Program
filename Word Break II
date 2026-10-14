@@ -1,0 +1,99 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_RESULT 10000
+typedef struct MemoNode {
+    int index;
+    char **sentences;
+    int count;
+    struct MemoNode *next;
+} MemoNode;
+int isInDict(const char *word, int wordLen, char **wordDict, int wordDictSize) {
+    for (int i = 0; i < wordDictSize; i++) {
+        if (strlen(wordDict[i]) == wordLen && strncmp(wordDict[i], word, wordLen) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+void freeList(char **list, int count) {
+    for (int i = 0; i < count; i++) {
+        free(list[i]);
+    }
+    free(list);
+}
+char** backtrack(const char *s, int start, int n, char **wordDict, int wordDictSize, MemoNode **memo, int *returnSize) {
+    if (start == n) {
+        char **res = (char **)malloc(sizeof(char *));
+        res[0] = (char *)calloc(1, sizeof(char)); 
+        *returnSize = 1;
+        return res;
+    }
+    for (MemoNode *curr = *memo; curr != NULL; curr = curr->next) {
+        if (curr->index == start) {
+            char **res = (char **)malloc(curr->count * sizeof(char *));
+            for (int i = 0; i < curr->count; i++) {
+                res[i] = strdup(curr->sentences[i]);
+            }
+            *returnSize = curr->count;
+            return res;
+        }
+    }
+
+    char **result = (char **)malloc(MAX_RESULT * sizeof(char *));
+    int resultCount = 0;
+
+    for (int end = start + 1; end <= n; end++) {
+        int len = end - start;
+        char *sub = (char *)malloc((len + 1) * sizeof(char));
+        strncpy(sub, s + start, len);
+        sub[len] = '\0';
+
+        if (isInDict(sub, len, wordDict, wordDictSize)) {
+            int subReturnSize = 0;
+            char **sublist = backtrack(s, end, n, wordDict, wordDictSize, memo, &subReturnSize);
+
+            for (int i = 0; i < subReturnSize; i++) {
+                const char *nextSub = sublist[i];
+                int spaceNeeded = (strlen(nextSub) > 0) ? 1 : 0;
+                char *combined = (char *)malloc(strlen(sub) + spaceNeeded + strlen(nextSub) + 1);
+                
+                strcpy(combined, sub);
+                if (spaceNeeded) {
+                    strcat(combined, " ");
+                }
+                strcat(combined, nextSub);
+                
+                result[resultCount++] = combined;
+            }
+            freeList(sublist, subReturnSize);
+        }
+        free(sub);
+    }
+    MemoNode *node = (MemoNode *)malloc(sizeof(MemoNode));
+    node->index = start;
+    node->count = resultCount;
+    node->sentences = (char **)malloc(resultCount * sizeof(char *));
+    for (int i = 0; i < resultCount; i++) {
+        node->sentences[i] = strdup(result[i]);
+    }
+    node->next = *memo;
+    *memo = node;
+
+    *returnSize = resultCount;
+    return result;
+}
+
+char** wordBreak(char *s, char **wordDict, int wordDictSize, int *returnSize) {
+    MemoNode *memo = NULL;
+    char **res = backtrack(s, 0, strlen(s), wordDict, wordDictSize, &memo, returnSize);
+    while (memo != NULL) {
+        MemoNode *temp = memo;
+        memo = memo->next;
+        freeList(temp->sentences, temp->count);
+        free(temp);
+    }
+
+    return res;
+}
