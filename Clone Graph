@@ -1,0 +1,34 @@
+#include <stdlib.h>
+#include <string.h>
+struct Node* cloneGraphDFS(struct Node* node, struct Node** visited) {
+    if (node == NULL) {
+        return NULL;
+    }
+    if (visited[node->val] != NULL) {
+        return visited[node->val];
+    }
+    struct Node* clone = (struct Node*)malloc(sizeof(struct Node));
+    clone->val = node->val;
+    clone->numNeighbors = node->numNeighbors;
+    visited[node->val] = clone;
+    if (clone->numNeighbors > 0) {
+        clone->neighbors = (struct Node**)malloc(clone->numNeighbors * sizeof(struct Node*));
+        for (int i = 0; i < node->numNeighbors; i++) {
+            clone->neighbors[i] = cloneGraphDFS(node->neighbors[i], visited);
+        }
+    } else {
+        clone->neighbors = NULL;
+    }
+    
+    return clone;
+}
+
+struct Node* cloneGraph(struct Node* s) {
+    if (s == NULL) {
+        return NULL;
+    }
+    struct Node* visited[101];
+    memset(visited, 0, sizeof(visited));
+    
+    return cloneGraphDFS(s, visited);
+}
