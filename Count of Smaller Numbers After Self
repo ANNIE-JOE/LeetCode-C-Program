@@ -1,0 +1,32 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+#define OFFSET 10001
+#define MAX_VAL 20005
+int bit[MAX_VAL];
+void update(int idx, int delta) {
+    for (; idx < MAX_VAL; idx += idx & -idx) {
+        bit[idx] += delta;
+    }
+}
+int query(int idx) {
+    int sum = 0;
+    for (; idx > 0; idx -= idx & -idx) {
+        sum += bit[idx];
+    }
+    return sum;
+}
+int* countSmaller(int* nums, int numsSize, int* returnSize) {
+    *returnSize = numsSize;
+    int* counts = (int*)malloc(numsSize * sizeof(int));
+    for (int i = 0; i < MAX_VAL; i++) {
+        bit[i] = 0;
+    }
+    for (int i = numsSize - 1; i >= 0; i--) {
+        int mapped_val = nums[i] + OFFSET; 
+        counts[i] = query(mapped_val - 1); 
+        update(mapped_val, 1);
+    }
+    
+    return counts;
+}
